@@ -1,0 +1,36 @@
+- name: Folders are present
+  import_tasks: folders.yml
+  tags:
+    - xdg
+
+- name: Bash is compliant
+  import_tasks: bash.yml
+  tags:
+    - xdg
+
+- name: Profile is compliant
+  import_tasks: profile.yml
+  tags:
+    - xdg
+
+- name: LightDM is compliant
+  import_tasks: lightdm.yml
+  tags:
+    - xdg
+
+- name: ~/.sudo_as_admin_successfull file is disabled
+  become: true
+  copy:
+    src: disable_admin_file
+    dest: /etc/sudoers.d/disable_admin_file
+  tags:
+    - xdg
+
+- name: wget is compliant
+  become: true
+  lineinfile:
+    path: /etc/wgetrc
+    line: hsts = 0
+    regexp: 'hsts[[:space:]]*=[[:space:]]*.+'
+  tags:
+    - xdg

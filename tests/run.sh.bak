@@ -1,0 +1,315 @@
+#!/usr/bin/env bash
+CURRENT_DIR=$(dirname $0)
+source "$CURRENT_DIR"/logger.sh
+
+BASE_IMAGES_FILE="$CURRENT_DIR"/base_images.txt
+RUNNING_CONTAINERS_FILE="/run/user/$(id -u)/ansible-tests-containers"
+DEFAULT_PLAYBOOK="bootstrap.yml"
+
+
+RETVAL=0
+
+ALL=true
+SETUP=false
+TESTS=false
+REPEAT=false
+TEARDOWN=false
+REMOTE=false
+LOCAL=false
+
+ARGS=()
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --setup)
+      ALL=false
+      SETUP=true
+      shift
+      ;;
+    --test|--tests)
+      ALL=false
+      TESTS=true
+      shift
+      ;;
+    --repeat)
+      ALL=false
+      REPEAT=true
+      shift
+      ;;
+    --teardown)
+      ALL=false
+      TEARDOWN=true
+      shift
+      ;;
+    --remote)
+      REMOTE=true
+      LOCAL=false
+      shift
+      ;;
+    --local)
+      REMOTE=false
+      LOCAL=true
+      shift
+      ;;
+    --base-image*)
+      [[ $1 == --base-image=* ]] && BASE_IMAGE="${1#*=}" && shift ||
+      BASE_IMAGE="$2" && shift 2
+      ;;
+    --*)
+      error "Unknown option: $1" >&2
+      exit 22
+      ;;
+    *)
+      ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+
+set -- "${ARGS[@]}"
+
+playbook="${1:-$DEFAULT_PLAYBOOK}"
+containers_local=()
+containers_remote=()
+
+launch_containers() {
+  readarray -t base_images <<< "${BASE_IMAGE:-$(sed '/^#/d' "$BASE_IMAGES_FILE")}"
+  for base_image in "${base_images[@]}"; do
+    debug "Building image from $base_image..." >&2
+
+    image="ansible-tests-$base_image"
+    docker build --build-arg BASE_IMAGE="$base_image" --tag "$image" "${DEBUG:+"--quiet"}" "$CURRENT_DIR"
+    if [ $? -ne 0 ]; then
+      error "Failed to build image from $base_image." >&2
+      return 1
+    fi
+
+    if $LOCAL; then
+      container=$(docker run --rm --detach "$image")
+      if [ $? -ne 0 ]; then
+        error "Failed to launch container from $image." >&2
+        return 1
+      fi
+
+      debug "Container launched." >&2
+
+      echo "$container" >> "$RUNNING_CONTAINERS_FILE"
+      containers_local+=("$container")
+    fi
+    if $REMOTE; then
+      container=$(docker run --rm --detach "$image")
+      if [ $? -ne 0 ]; then
+        error "Failed to launch container from $image." >&2
+        return 1
+      fi
+
+      debug "Container launched." >&2
+
+      echo "$container" >> "$RUNNING_CONTAINERS_FILE"
+      containers_remote+=("$container")
+    fi
+  done
+
+  total_containers=$(( ${#containers_local[@]} + ${#containers_remote[@]} ))
+  if [ $total_containers -eq 0 ]; then
+    error "No containers launched." >&2
+    return 1
+  else
+    success "Containers launched: $total_containers" >&2
+  fi
+
+}
+
+docker_ip() {
+  container="$1"
+  docker inspect -f '{{.NetworkSettings.IPAddress}}' "$container"
+}
+
+docker_image() {
+  container="$1"
+  image_sha=$(docker inspect "$container" | jq -r '.[0].Config.Image')
+  image_name=$(docker image inspect "$image_sha" | jq -r '.[0].RepoTags[0]')
+  echo "$image_name"
+}
+
+bootstrap() {
+  container="$1"
+  docker cp . "$container":/tmp
+  debug "Executing bootstrap playbook on localhost..." >&2
+  docker exec -t "$container" ansible-playbook "${DEBUG:+"-v"}" --connection=local --inventory localhost, /tmp/"$playbook"
+  if [ $? -ne 0 ]; then
+    error "Bootstrap playbook failed." >&2
+    RETVAL=1
+    return 1
+  fi
+}
+
+bootstrap_remote() {
+  ip="$1"
+  debug "Executing bootstrap playbook on remote..." >&2
+  ansible-playbook --inventory "$ip," "${DEBUG:+"-v"}" --user test --private-key "$CURRENT_DIR"/.ssh/id_rsa "$playbook"
+  if [ $? -ne 0 ]; then
+    error "Bootstrap playbook failed." >&2
+    RETVAL=1
+    return 1
+  fi
+}
+
+run_tests() {
+  container="$1"
+  image=$(docker_image "$container")
+
+  all_tests_passed=true
+  for file in "$CURRENT_DIR"/test_*.sh; do
+    debug "Running $file..." >&2
+    docker exec -t "$container" bash -l < "$file"
+    # bash "$file" "$ip"
+    if [ $? -ne 0 ]; then
+      warn "Test $file failed." >&2
+      all_tests_passed=false
+      RETVAL=1
+    fi
+  done
+
+  if $all_tests_passed; then
+    success "All tests passed in $image." >&2
+  else
+    error "Some tests failed in $image." >&2
+  fi
+}
+
+teardown() {
+  all_containers_stopped=true
+
+  readarray -t running_containers < "$RUNNING_CONTAINERS_FILE"
+  for container in "${running_containers[@]}"; do
+    # first cleanup dangling containers
+    if ! docker inspect "$container" &> /dev/null; then
+      debug "Removing dangling container $container..." >&2
+      sed --in-place "/$container/d" "$RUNNING_CONTAINERS_FILE"
+      continue
+    fi
+
+    debug "Stopping container $container..." >&2
+
+    if docker stop "$container" > /dev/null; then
+      sed --in-place "/$container/d" "$RUNNING_CONTAINERS_FILE"
+    else
+      error "Failed to stop container $container" >&2
+      all_containers_stopped=false
+      RETVAL=2
+    fi
+  done
+
+  if $all_containers_stopped; then
+    success "Teardown successful" >&2
+  else
+    error "Teardown failed" >&2
+  fi
+}
+
+
+main() {
+  if $ALL || $SETUP; then
+    info "Running setup..." >&2
+
+    launch_containers
+  fi
+
+  if [ $? -eq 0 ]; then
+    if $LOCAL; then
+      info "Starting LOCAL mode..."
+      for container in "${containers_local[@]}"; do
+        image=$(docker_image "$container")
+        info "Using image in local mode: $image..." >&2
+
+        start=$(date +%s)
+        if $ALL || $SETUP; then
+          info "Running initial bootstrap..." >&2
+          bootstrap "$container"
+        fi
+        end=$(date +%s)
+        duration=$((end-start))
+        info "Initial bootstrap took $duration seconds for $image." >&2
+
+
+        start=$(date +%s)
+        if $ALL || $TESTS; then
+          info "Running tests..." >&2
+          run_tests "$container"
+        fi
+        end=$(date +%s)
+        duration=$((end-start))
+        info "Tests took $duration seconds for $image." >&2
+
+        start=$(date +%s)
+        if $ALL || $REPEAT; then
+          info "Running repeat bootstrap to check for idempotency..." >&2
+          bootstrap "$container"
+          run_tests "$container"
+        fi
+        end=$(date +%s)
+        duration=$((end-start))
+        info "Repeat bootstrap took $duration seconds for $image." >&2
+      done
+    fi
+
+    if $REMOTE; then
+      info "Starting REMOTE mode..."
+      for container in "${containers_remote[@]}"; do
+        image=$(docker_image "$container")
+        info "Using image in local mode: $image..." >&2
+
+        ip=$(docker_ip "$container")
+        debug "Container IP: $ip" >&2
+
+        start=$(date +%s)
+        if $ALL || $SETUP; then
+          info "Running initial bootstrap..." >&2
+          bootstrap_remote "$ip"
+        fi
+        end=$(date +%s)
+        duration=$((end-start))
+        info "Initial bootstrap took $duration seconds for $image." >&2
+
+
+        start=$(date +%s)
+        if $ALL || $TESTS; then
+          info "Running tests..." >&2
+          run_tests "$container"
+        fi
+        end=$(date +%s)
+        duration=$((end-start))
+        info "Tests took $duration seconds for $image." >&2
+
+        start=$(date +%s)
+        if $ALL || $REPEAT; then
+          info "Running repeat bootstrap to check for idempotency..." >&2
+          bootstrap_remote "$ip"
+          run_tests "$container"
+        fi
+        end=$(date +%s)
+        duration=$((end-start))
+        info "Repeat bootstrap took $duration seconds for $image." >&2
+      done
+    fi
+
+    if $TESTS; then
+      if [ $RETVAL -eq 0 ]; then
+        success "All tests passed." >&2
+      else
+        error "Some tests failed." >&2
+      fi
+    fi
+
+  fi
+
+  if $ALL || $TEARDOWN; then
+    info "Running teardown..." >&2
+    teardown
+  fi
+  exit $RETVAL
+}
+
+
+main

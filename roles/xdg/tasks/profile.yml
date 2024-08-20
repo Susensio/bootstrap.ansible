@@ -1,0 +1,22 @@
+- name: /etc/profile.d/ directory exists
+  become: true
+  file:
+    path: /etc/profile.d
+    state: directory
+  tags:
+    - profile
+
+- name: User ~/.config/profile will be sourced
+  become: true
+  copy:
+    src: profile_xdg.sh
+    dest: /etc/profile.d/profile_xdg.sh
+  tags:
+    - profile
+
+- name: No ~/.profile
+  shell:
+    cmd: mv --no-clobber "{{ ansible_env.HOME }}/.profile" "{{ XDG_CONFIG_HOME }}/profile" || rm "{{ ansible_env.HOME }}/.profile"
+    removes: "{{ ansible_env.HOME }}/.profile"
+  tags:
+    - profile

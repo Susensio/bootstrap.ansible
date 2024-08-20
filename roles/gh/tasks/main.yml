@@ -1,0 +1,37 @@
+- name: Dependency is installed
+  become: true
+  delegate_to: localhost
+  apt:
+    name: python3-debian
+    state: present
+    update_cache: true
+    cache_valid_time: "{{ 60*60*24*7 }}"
+  tags:
+    - install
+    - dependencies
+    - gh
+
+- name: APT Repository is present
+  become: true
+  deb822_repository:
+    name: github-cli
+    types: deb
+    uris: https://cli.github.com/packages
+    suites: stable
+    components: main
+    architectures: amd64
+    signed_by: https://cli.github.com/packages/githubcli-archive-keyring.gpg
+  tags:
+    - install
+    - gh
+
+- name: Package is installed
+  become: true
+  apt:
+    name: gh
+    state: present
+    update_cache: true
+    cache_valid_time: "{{ 60*60*24*7 }}"
+  tags:
+    - install
+    - gh

@@ -1,0 +1,55 @@
+- name: Server is installed
+  become: true
+  apt:
+    name:
+      - openssh-server
+      - cron
+    state: present
+    update_cache: true
+    cache_valid_time: "{{ 60*60*24*7 }}"  # 1 week
+  tags:
+    - install
+    - ssh
+
+- name: Service is running
+  become: true
+  service:
+    name: ssh
+    state: started
+    enabled: true
+  tags:
+    - ssh
+
+- name: SSH key is generated for user
+  openssh_keypair:
+    path: "$HOME/.ssh/id_ed25519"
+    type: ed25519
+    comment: "{{ ansible_user_id }}@{{ ansible_fqdn }}"
+  register: ssh_keypair
+  tags:
+    - ssh
+
+- name: Public keys are synced
+  get_url:
+    url: "{{ public_keys_url }}"
+    dest: "$HOME/.ssh/authorized_keys"
+    force: true
+  tags:
+    - ssh
+
+- name: Automatic synchronization is enabled
+  cron:
+    name: Sync SSH keys
+    job: "wget {{ public_keys_url }} -O $HOME/.ssh/authorized_keys"
+    special_time: hourly
+  tags:
+    - ssh
+
+- name: Only key-based authentication is allowed
+  become: true
+  copy:
+    src: disable_password_login.conf
+    dest: /etc/ssh/sshd_config.d/disable_password_login.conf
+  notify: Restart ssh
+  tags:
+    - ssh

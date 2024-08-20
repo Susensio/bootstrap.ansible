@@ -1,0 +1,57 @@
+- name: Package is installed
+  become: true
+  apt:
+    name:
+      - tmux
+      - git
+    state: present
+    update_cache: true
+    cache_valid_time: "{{ 60*60*24*7 }}"  # 1 week
+  tags:
+    - install
+    - tmux
+
+- name: TPM directory exists
+  file:
+    path: "{{ tpm_path }}"
+    state: directory
+  tags:
+    - tmux
+    - config
+
+- name: TPM is present
+  git:
+    repo: "{{ tpm_repo }}"
+    dest: "{{ tpm_path }}"
+  tags:
+    - tmux
+    - config
+
+- name: Needed plugins are installed
+  command:
+    cmd: "{{ tpm_path }}/bin/install_plugins"
+  register: tpm_installed
+  changed_when: tpm_installed.stdout_lines | reject('search', 'Already installed') | count > 0
+  tags:
+    - tmux
+    - config
+
+- name: Old plugins are removed
+  command:
+    cmd: "{{ tpm_path }}/bin/clean_plugins"
+  register: tpm_cleaned
+  changed_when: tpm_cleaned.stdout
+  tags:
+    - tmux
+    - config
+
+- name: Plugins are up to date
+  vars:
+    plugin_regex: '\"(?P<plugin>.*?)\" update (?P<status>success|fail)'
+  command:
+    cmd: "{{ tpm_path }}/bin/update_plugins all"
+  register: tpm_updated
+  changed_when: tpm_updated.stdout_lines | select('search', plugin_regex) | count != tpm_updated.stdout_lines | select('search', 'Already up to date') | count
+  tags:
+    - tmux
+    - config

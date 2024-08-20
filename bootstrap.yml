@@ -1,0 +1,27 @@
+- hosts: all
+  gather_facts: true
+  vars_files: vars.yml
+  # environment:
+  #   XDG_CONFIG_HOME: "{{ ansible_env.HOME }}/.config"
+
+  pre_tasks:
+    - name: Temp directories exist
+      become: true
+      file:
+        path: "/tmp/ansible"
+        state: directory
+        mode: 0777
+      tags:
+      - always
+
+  roles:
+    - xdg
+    - packages
+    - yadm
+    - ssh
+    - anacron
+    - gh
+    - bin
+    - fish
+    - tmux
+    - nvim

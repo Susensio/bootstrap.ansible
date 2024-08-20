@@ -1,0 +1,19 @@
+- name: XDG_CONFIG_HOME directory exists
+  file:
+    path: "{{ XDG_CONFIG_HOME }}"
+    state: directory
+
+- name: XDG_DATA_HOME directory exists
+  file:
+    path: "{{ XDG_DATA_HOME }}"
+    state: directory
+
+- name: XDG_STATE_HOME directory exists
+  file:
+    path: "{{ XDG_STATE_HOME }}"
+    state: directory
+
+- name: XDG_CACHE_HOME directory exists
+  file:
+    path: "{{ XDG_CACHE_HOME }}"
+    state: directory

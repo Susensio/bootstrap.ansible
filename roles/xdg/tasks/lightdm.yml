@@ -1,0 +1,17 @@
+- name: Only if lighdm is used
+  become: true
+  block:
+    - name: /etc/lightdm/lightdm.conf.d directory exists
+      file:
+        path: /etc/lightdm/lightdm.conf.d
+        state: directory
+
+    - name: ~/.Xauthority file won't be created
+      copy:
+        src: xauthority_xdg.conf
+        dest: /etc/lightdm/lightdm.conf.d/xauthority_xdg.conf
+  when:
+    - '"/etc/X11/default-display-manager" is file'
+    - '"lightdm" in lookup("ansible.builtin.file", "/etc/X11/default-display-manager")'
+  tags:
+    - lightdm

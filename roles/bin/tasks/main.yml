@@ -1,0 +1,100 @@
+- name: Pip is installed
+  become: true
+  delegate_to: localhost
+  apt:
+    name: python3-pip
+    state: present
+    update_cache: true
+    cache_valid_time: "{{ 60*60*24*7 }}"  # 1 week
+  tags:
+    - install
+    - dependencies
+    - bin
+
+- name: Python library is installed
+  become: true
+  delegate_to: localhost
+  pip:
+    name: github3.py
+    break_system_packages: true
+  tags:
+    - install
+    - dependencies
+    - bin
+
+- name: Check if already installed
+  stat:
+    path: "{{ bin_path }}/bin"
+  register: bin_file
+  tags:
+    - install
+    - bin
+
+- block:
+  - name: Get latest release info
+    delegate_to: localhost
+    community.general.github_release:
+      user: marcosnils
+      repo: bin
+      action: latest_release
+    register: bin_latest
+    when: not bin_file.stat.exists
+    tags:
+      - install
+      - bin
+
+  - name: ~/.local/bin directory exists
+    file:
+      path: "{{ bin_path }}"
+      state: directory
+      recurse: true
+    when: not bin_file.stat.exists
+    tags:
+      - install
+      - bin
+
+  - name: ~/.config/bin directory exists
+    file:
+      path: "{{ bin_config_dir }}"
+      state: directory
+      recurse: true
+    when: not bin_file.stat.exists
+    tags:
+      - install
+      - bin
+
+  - name: Download bin
+    vars:
+      deb_architectures:
+        armv6l: armhf
+        armv7l: armhf
+        aarch64: arm64
+        x86_64: amd64
+        i386: i386
+    get_url:
+      url: "https://github.com/{{ bin_repo }}/releases/download/{{ bin_latest['tag'] }}/bin_{{ bin_latest['tag'] | regex_replace('^v','') }}_{{ ansible_system | lower }}_{{ deb_architectures[ansible_architecture] }}"
+      dest: "/tmp/bin"
+      mode: a+x
+    when: not bin_file.stat.exists
+    tags:
+      - install
+      - bin
+
+  - name: Create bin config file
+    template:
+      src: "templates/bin_config.json"
+      dest: "{{ bin_config_dir }}/config.json"
+    when: not bin_file.stat.exists
+    tags:
+      - install
+      - bin
+
+  - name: Make bin managed by itself
+    command:
+      cmd: "/tmp/bin install github.com/{{ bin_repo }} {{ bin_path }}"
+      creates: "{{ bin_path }}/bin"
+    when: not bin_file.stat.exists
+    tags:
+      - install
+      - bin
+  when: not bin_file.stat.exists

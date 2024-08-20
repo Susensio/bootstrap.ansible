@@ -1,0 +1,82 @@
+- name: Dependencies are installed
+  become: true
+  apt:
+    name:
+      - gcc
+      - npm
+      - curl
+      - wget
+      - unzip
+      - python3-pip
+      - python3-venv
+    state: present
+    update_cache: true
+    cache_valid_time: "{{ 60*60*24*7 }}"
+  tags:
+    - install
+    - dependencies
+    - nvim
+
+- name: Check installed nvim version
+  command:
+    cmd: /opt/nvim/bin/nvim --version || true | head -n 1 | awk '{print $2}'
+  register: nvim_version
+  ignore_errors: true
+  tags:
+    - install
+    - nvim
+
+- name: Check latest nvim release
+  uri:
+    url: https://api.github.com/repos/neovim/neovim/releases/latest
+    return_content: true
+  register: nvim_release
+  tags:
+    - install
+    - nvim
+
+- name: NVIM stable is installed
+  block:
+
+    - name: NVIM directory exists
+      file:
+        path: /opt/nvim
+        state: directory
+
+    - name: /opt/bin directory exists
+      file:
+        path: /opt/bin
+        state: directory
+
+    - name: NVIM is downloaded
+      unarchive:
+        src: https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
+        dest: /opt/nvim
+        remote_src: yes
+        extra_opts: --strip-components=1
+
+    - name: NVIM is linked
+      file:
+        src: /opt/nvim/bin/nvim
+        dest: /opt/bin/nvim
+        state: link
+
+    - name: NVIM is in PATH
+      copy:
+        src: nvim_path.sh
+        dest: /etc/profile.d/nvim_path.sh
+
+  when: nvim_release.json["tag_name"] != nvim_version.stdout
+  become: true
+  tags:
+    - install
+    - nvim
+
+# - name: Plugins are up to date
+#   command:
+#     cmd: nvim --headless '+Lazy! sync' '+qa'
+#   register: lazy_updated
+#   changed_when: lazy_updated.stdout is search("Installed") or lazy_updated.stdout is search("Removed")
+#   tags:
+#     - nvim
+#     - config

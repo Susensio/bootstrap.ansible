@@ -1,0 +1,36 @@
+- name: Packages are installed
+  become: true
+  apt:
+    name:
+      - cron
+      - anacron
+    state: present
+    update_cache: true
+    cache_valid_time: "{{ 60*60*24*7 }}"  # 1 week
+  tags:
+    - install
+    - anacron
+
+- name: Service is running
+  become: true
+  service:
+    name: cron
+    state: started
+    enabled: true
+  tags:
+    - anacron
+
+- name: ~/.local/state/anacron directory exists
+  file:
+    path: ~/.local/state/anacron
+    state: directory
+  tags:
+    - anacron
+
+- name: Anacron is in user crontab
+  cron:
+    name: Run user anacron
+    job: '/usr/sbin/anacron -t "$HOME/.config/anacron/anacrontab" -S "$HOME/.local/state/anacron"'
+    special_time: hourly
+  tags:
+    - anacron

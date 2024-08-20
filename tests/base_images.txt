@@ -1,0 +1,2 @@
+debian:testing
+linuxmintd/mint22-amd64:latest

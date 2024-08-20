@@ -1,0 +1,13 @@
+- name: Packages are installed
+  become: true
+  apt:
+    name: "{{ apt_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: "{{ 60*60*24*7 }}"  # 1 week
+    autoclean: true
+    autoremove: true
+    purge: true
+  tags:
+    - install
+    - packages

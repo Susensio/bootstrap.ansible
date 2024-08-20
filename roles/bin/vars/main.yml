@@ -1,0 +1,7 @@
+bin_repo: "marcosnils/bin"
+bin_path: "$HOME/.local/bin"
+bin_config_dir: "$HOME/.config/bin"
+
+bin_repos:
+- github.com/jesseduffield/lazygit
+- github.com/jesseduffield/lazydocker

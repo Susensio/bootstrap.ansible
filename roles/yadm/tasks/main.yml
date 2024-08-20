@@ -1,0 +1,64 @@
+- name: Package is installed
+  become: true
+  apt:
+    name:
+      - gpg
+      - yadm
+    state: present
+    update_cache: true
+    cache_valid_time: "{{ 60*60*24*7 }}"  # 1 week
+  tags:
+    - install
+    - yadm
+
+- name: Dotfiles repository is present
+  environment:
+    GIT_TERMINAL_PROMPT: 0
+  shell:
+    cmd: "yadm clone {{ dotfiles_repo }} --no-bootstrap && yadm checkout {{ ansible_env.HOME }}"
+    creates: "{{ yadm_git_path }}"
+  tags:
+    - yadm
+
+- name: Git include is configured
+  vars:
+    yadm_git_path: "{{ ansible_env.HOME }}/.local/share/yadm/repo.git"
+  environment:
+    GIT_TERMINAL_PROMPT: 0
+  git_config:
+    repo: "{{ yadm_git_path }}"
+    name: include.path
+    value: "{{ ansible_env.HOME }}/.config/yadm/gitconfig"
+    scope: local
+  tags:
+    - yadm
+    - config
+
+- name: Sparse checkout is enabled
+  environment:
+    GIT_TERMINAL_PROMPT: 0
+  git_config:
+    repo: "{{ yadm_git_path }}"
+    name: core.sparseCheckout
+    value: true
+    scope: local
+  tags:
+    - yadm
+    - config
+
+- name: Sparse checkout files are configured
+  copy:
+    src: sparse-checkout
+    dest: "{{ yadm_git_path }}/info/sparse-checkout"
+  tags:
+    - yadm
+    - config
+
+- name: Sparse checkout is applied
+  command:
+    chdir: "{{ yadm_git_worktree }}"
+    cmd: yadm sparse-checkout reapply
+    removes: ".github/"
+  tags:
+    - yadm
+    - config

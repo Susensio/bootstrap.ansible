@@ -1,0 +1,21 @@
+apt_packages:
+- ansible
+- bat
+- cargo
+- curl
+- eza
+- fd-find
+- fish
+- fzf
+- gh
+- git
+- git-lfs
+- htop
+- pipx
+- python3-pip
+- ripgrep
+- thefuck
+- tldr
+- tmux
+- wget
+- yadm

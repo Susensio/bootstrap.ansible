@@ -1,0 +1,2 @@
+fish_config_dir: "{{ ansible_env.HOME }}/.config/fish"
+fish_plugins_path: "{{ fish_config_dir }}/fish_plugins"

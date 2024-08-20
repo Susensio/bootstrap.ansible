@@ -1,0 +1,47 @@
+- name: Package is installed
+  become: true
+  apt:
+    name:
+      - curl
+      - fish
+    state: present
+    update_cache: true
+    cache_valid_time: "{{ 60*60*24*7 }}"  # 1 week
+  tags:
+    - install
+    - fish
+
+- name: Default shell is configured
+  become: true
+  ansible.builtin.user:
+    name: "{{ ansible_user_id }}"
+    shell: /usr/bin/fish
+  tags:
+    - fish
+    - install
+
+- name: Fisher is bootstraped
+  command:
+    cmd: >
+      fish -c
+      'functions -q fisher && exit 0
+      || curl -sL https://git.io/fisher | source
+      && mv {{ fish_plugins_path }} {{ fish_plugins_path }}.bak || true
+      && fisher install jorgebucaran/fisher
+      && mv -f {{ fish_plugins_path }}.bak {{ fish_plugins_path }} || true
+      && exit 180'
+  register: fisher_installed
+  changed_when: fisher_installed.rc == 180
+  failed_when: fisher_installed.rc != 0 and fisher_installed.rc != 180
+  tags:
+    - fish
+    - config
+
+- name: Plugins are up to date
+  command:
+    cmd: fish -c 'fisher update'
+  register: fisher_updated
+  changed_when: fisher_updated.stdout is search("Installed") or fisher_updated.stdout is search("Removed")
+  tags:
+    - fish
+    - config

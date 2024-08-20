@@ -1,0 +1,4 @@
+{
+    "default_path": "{{ bin_path }}",
+    "bins": {}
+}

@@ -1,0 +1,9 @@
+# Make bash follow the XDG_CONFIG_HOME specification
+_confdir=${XDG_CONFIG_HOME:-$HOME/.config}/bash
+_bash_logout=${_confdir}/bash_logout
+
+# Source settings file
+[ -f "$_bash_logout" ] && . "$_bash_logout"
+
+unset _confdir
+unset _bash_logout
