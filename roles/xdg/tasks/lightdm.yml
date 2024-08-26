@@ -1,3 +1,17 @@
+- name: Read default display manager
+  slurp:
+    src: /etc/X11/default-display-manager
+  register: default_display_manager
+  # changed_when: false
+  tags:
+    - lightdm
+
+- name: Debug default display manager
+  debug:
+    var: "{{ default_display_manager['content'] | b64decode }}"
+  tags:
+    - lightdm
+
 - name: Only if lighdm is used
   become: true
   block:
@@ -11,7 +25,6 @@
         src: xauthority_xdg.conf
         dest: /etc/lightdm/lightdm.conf.d/xauthority_xdg.conf
   when:
-    - '"/etc/X11/default-display-manager" is file'
-    - '"lightdm" in lookup("ansible.builtin.file", "/etc/X11/default-display-manager")'
+    - '{{ "lightdm" in default_display_manager.content | b64decode }}'
   tags:
     - lightdm

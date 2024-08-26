@@ -11,3 +11,13 @@
   tags:
     - install
     - packages
+
+- name: Bat symlink exists
+  become: true
+  file:
+    src: /usr/bin/batcat
+    dest: /usr/bin/bat
+    state: link
+  tags:
+    - install
+    - packages

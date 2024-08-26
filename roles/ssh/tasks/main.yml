@@ -22,10 +22,12 @@
 
 - name: SSH key is generated for user
   openssh_keypair:
+    regenerate: partial_idempotence
     path: "$HOME/.ssh/id_ed25519"
     type: ed25519
     comment: "{{ ansible_user_id }}@{{ ansible_fqdn }}"
-  register: ssh_keypair
+  # register: ssh_keypair
+  ignore_errors: true
   tags:
     - ssh
 
@@ -53,3 +55,28 @@
   notify: Restart ssh
   tags:
     - ssh
+
+- name: Save passphrases on ssh-agent
+  become: true
+  copy:
+    src: ssh_agent.conf
+    dest: /etc/ssh/ssh_config.d/ssh_agent.conf
+  notify: Restart ssh
+  tags:
+    - ssh
+
+# - name: Host is authorized in GitHub
+#   community.general.github_key:
+#     name: "{{ ansible_user_id }}@{{ ansible_fqdn }}"
+#     pubkey: "{{ ssh_keypair.public_key }}"
+#     token: !vault |
+#               $ANSIBLE_VAULT;1.1;AES256
+#               33373431643335333632616438353230363331613335393866353033653962653630313563373839
+#               6237363730346532353463393161376462633531613363310a366534346530663437313137326264
+#               64383331383465363939613037393866363661353232656334643333666531346233383365396365
+#               6430386664643539390a376332663465666333626637656465656236313363633166663730616238
+#               63373835646463626234346633303962313330623163373366356336633030613332616366616162
+#               6637636438313732313131366665646261616232663538323539
+#   when: "ssh_keypair.changed and 'secure' in group_names"
+#   tags:
+#     - ssh

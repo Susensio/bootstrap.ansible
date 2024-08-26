@@ -11,14 +11,14 @@
     - install
     - fish
 
-- name: Default shell is configured
-  become: true
-  ansible.builtin.user:
-    name: "{{ ansible_user_id }}"
-    shell: /usr/bin/fish
-  tags:
-    - fish
-    - install
+# - name: Default shell is configured
+#   become: true
+#   ansible.builtin.user:
+#     name: "{{ ansible_user_id }}"
+#     shell: /usr/bin/fish
+#   tags:
+#     - fish
+#     - install
 
 - name: Fisher is bootstraped
   command:

@@ -18,6 +18,7 @@
     cmd: "yadm clone {{ dotfiles_repo }} --no-bootstrap && yadm checkout {{ ansible_env.HOME }}"
     creates: "{{ yadm_git_path }}"
   tags:
+    - install
     - yadm
 
 - name: Git include is configured
@@ -62,3 +63,14 @@
   tags:
     - yadm
     - config
+
+- name: Dotfiles repository is updated
+  environment:
+    GIT_TERMINAL_PROMPT: 0
+  command:
+    cmd: "yadm pull"
+  register: yadm_pulled
+  changed_when: not yadm_pulled.stdout is search("Already up to date")
+  tags:
+    - update
+    - yadm

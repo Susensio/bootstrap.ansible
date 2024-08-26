@@ -89,4 +89,7 @@ RUN ansible localhost --inventory=localhots, --connection=local --module-name=in
 WORKDIR /home/$USERNAME
 
 # Ensure /etc/profile is loaded
-CMD ["bash", "-l", "-c", "exec fish"]
+SHELL ["/bin/bash", "-l", "-c"]
+ENTRYPOINT ["/bin/bash", "-l", "-c"]
+
+CMD ["fish"]

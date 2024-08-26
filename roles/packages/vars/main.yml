@@ -18,4 +18,5 @@ apt_packages:
 - tldr
 - tmux
 - wget
+- xclip
 - yadm

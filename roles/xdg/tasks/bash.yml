@@ -2,7 +2,7 @@
   become: true
   blockinfile:
     path: /etc/bash.bashrc
-    block: "{{ lookup('ansible.builtin.file', 'bash.bashrc') }}"
+    block: "{{ lookup('file', 'bash.bashrc') }}"
     prepend_newline: yes
     validate: /bin/bash -n %s
   tags:
@@ -13,7 +13,7 @@
   blockinfile:
     path: /etc/bash.bash.logout
     create: true
-    block: "{{ lookup('ansible.builtin.file', 'bash.bash.logout') }}"
+    block: "{{ lookup('file', 'bash.bash.logout') }}"
     prepend_newline: yes
     validate: /bin/bash -n %s
   tags:
@@ -28,7 +28,7 @@
 
 - name: No ~/.bashrc
   shell:
-    cmd: mv "{{ ansible_env.HOME }}/.bashrc" "{{ XDG_CONFIG_HOME }}/bash/bashrc" || rm "{{ ansible_env.HOME }}/.bashrc"
+    cmd: mv --no-clobber "{{ ansible_env.HOME }}/.bashrc" "{{ XDG_CONFIG_HOME }}/bash/bashrc" || rm "{{ ansible_env.HOME }}/.bashrc"
     removes: "{{ ansible_env.HOME }}/.bashrc"
   tags:
     - bash
@@ -38,19 +38,21 @@
     path: "{{ XDG_CONFIG_HOME }}/bash/bashrc"
     regexp: '\s~/\.bash'
     replace: ' ~/.config/bash/bash'
-  when: lookup('file', '~/.bashrc', errors='ignore')
+  when: lookup('file', '~/bash/bashrc', errors='ignore')
+  tags:
+    - bash
 
 
 - name: No ~/.bash_aliases
   shell:
-    cmd: mv "{{ ansible_env.HOME }}/.bash_aliases" "{{ XDG_CONFIG_HOME }}/bash/bash_aliases" || rm "{{ ansible_env.HOME }}/.bash_aliases"
+    cmd: mv --no-clobber "{{ ansible_env.HOME }}/.bash_aliases" "{{ XDG_CONFIG_HOME }}/bash/bash_aliases" || rm "{{ ansible_env.HOME }}/.bash_aliases"
     removes: "{{ ansible_env.HOME }}/.bash_aliases"
   tags:
     - bash
 
 - name: No ~/.bash_logout
   shell:
-    cmd: mv "{{ ansible_env.HOME }}/.bash_logout" "{{ XDG_CONFIG_HOME }}/bash/bash_logout" || rm "{{ ansible_env.HOME }}/.bash_logout"
+    cmd: mv --no-clobber "{{ ansible_env.HOME }}/.bash_logout" "{{ XDG_CONFIG_HOME }}/bash/bash_logout" || rm "{{ ansible_env.HOME }}/.bash_logout"
     removes: "{{ ansible_env.HOME }}/.bash_logout"
   tags:
     - bash

@@ -18,12 +18,13 @@
     - nvim
 
 - name: Check installed nvim version
-  command:
+  shell:
     cmd: /opt/nvim/bin/nvim --version || true | head -n 1 | awk '{print $2}'
   register: nvim_version
-  ignore_errors: true
+  changed_when: false
   tags:
     - install
+    - update
     - nvim
 
 - name: Check latest nvim release
@@ -31,8 +32,10 @@
     url: https://api.github.com/repos/neovim/neovim/releases/latest
     return_content: true
   register: nvim_release
+  changed_when: false
   tags:
     - install
+    - update
     - nvim
 
 - name: NVIM stable is installed
@@ -55,12 +58,6 @@
         remote_src: yes
         extra_opts: --strip-components=1
 
-    - name: NVIM is linked
-      file:
-        src: /opt/nvim/bin/nvim
-        dest: /opt/bin/nvim
-        state: link
-
     - name: NVIM is in PATH
       copy:
         src: nvim_path.sh
@@ -70,13 +67,27 @@
   become: true
   tags:
     - install
+    - update
     - nvim
 
+# - name: Needed plugins are installed
+#   command:
+#     cmd: /opt/nvim/bin/nvim --headless '+qa'
+#   register: lazy_bootstraped
+#   changed_when: lazy_bootstraped.stdout | lenght > 0
+#   tags:
+#     - install
+#     - nvim
+#     - update
+#     - config
+#
 # - name: Plugins are up to date
 #   command:
-#     cmd: nvim --headless '+Lazy! sync' '+qa'
+#     cmd: /opt/nvim/bin/nvim --headless '+Lazy! sync' '+qa'
 #   register: lazy_updated
-#   changed_when: lazy_updated.stdout is search("Installed") or lazy_updated.stdout is search("Removed")
+#   changed_when: lazy_updated.stdout | lenght > 0
 #   tags:
+#     - install
 #     - nvim
+#     - update
 #     - config
