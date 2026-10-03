@@ -11,6 +11,61 @@
     - install
     - tmux
 
+- name: Get system tmux version
+  command:
+    cmd: "/usr/bin/tmux -V"
+  register: tmux_version
+  changed_when: false
+  tags:
+    - install
+    - tmux
+
+- name: Fail if tmux build is not needed
+  fail:
+    msg: "Packaged tmux is up to date"
+  when: tmux_version.stdout.split(' ')[1] is version('3.4', '>')
+  tags:
+    - install
+    - tmux
+
+- name: Dependencies are installed
+  become: true
+  apt:
+    name: "{{ tmux_dependencies }}"
+    state: present
+    update_cache: true
+    cache_valid_time: "{{ 60*60*24*7 }}"  # 1 week
+  tags:
+    - install
+    - tmux
+
+- name: Tmux repo is downloaded
+  git:
+    repo: "{{ tmux_repo }}"
+    dest: "{{ tmux_path }}"
+  register: tmux_repo_downloaded
+  tags:
+    - install
+    - tmux
+
+- name: Tmux is built
+  shell:
+    cmd: "sh autogen.sh && ./configure && make"
+    chdir: "{{ tmux_path }}"
+  when: tmux_repo_downloaded.changed
+  tags:
+    - install
+    - tmux
+
+- name: tmux symlink exists
+  file:
+    src: "{{ tmux_path }}/tmux"
+    dest: "{{ ansible_env.HOME }}/.local/bin/tmux"
+    state: link
+  tags:
+    - install
+    - tmux
+
 - name: TPM directory exists
   file:
     path: "{{ tpm_path }}"

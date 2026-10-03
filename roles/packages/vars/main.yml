@@ -3,14 +3,19 @@ apt_packages:
 - bat
 - cargo
 - curl
-- eza
+# - eza
 - fd-find
 - fish
 - fzf
 - gh
 - git
+# - git-delta
 - git-lfs
+- golang-go
 - htop
+- hyperfine
+- jq
+- keychain
 - pipx
 - python3-pip
 - ripgrep
@@ -20,3 +25,4 @@ apt_packages:
 - wget
 - xclip
 - yadm
+- zoxide

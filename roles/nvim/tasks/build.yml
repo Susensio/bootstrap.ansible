@@ -1,0 +1,34 @@
+- name: Build dependencies are installed
+  become: true
+  apt:
+    name: "{{ nvim_build_dependencies }}"
+    state: present
+    update_cache: true
+    cache_valid_time: "{{ 60*60*24*7 }}"
+  tags:
+    - install
+    - dependencies
+    - nvim
+
+- name: nvim repo is downloaded
+  become: true
+  git:
+    repo: "{{ nvim_repo }}"
+    dest: "{{ nvim_repo_path }}"
+    version: "stable"
+  register: nvim_repo_downloaded
+  tags:
+    - install
+    - nvim
+
+- name: nvim is built and installed
+  become: true
+  community.general.make:
+    chdir: "{{ nvim_repo_path }}"
+    target: "install"
+    params:
+      CMAKE_BUILD_TYPE: "Release"
+  when: nvim_repo_downloaded.changed
+  tags:
+    - install
+    - nvim

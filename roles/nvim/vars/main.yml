@@ -1,2 +1,19 @@
-cargo_home: "{{ ansible_env.HOME }}/.local/share/cargo"
+nvim_dependencies:
+  - gcc
+  - npm
+  - curl
+  - wget
+  - unzip
+  - python3-pip
+  - python3-venv
 
+nvim_build_dependencies:
+  - ninja-build
+  - gettext
+  - cmake
+  - unzip
+  - curl
+  - build-essential
+
+nvim_repo: "https://github.com/neovim/neovim.git"
+nvim_repo_path: "/usr/local/src/nvim"

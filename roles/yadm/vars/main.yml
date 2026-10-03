@@ -1,6 +1,5 @@
-dotfiles_repo: https://github.com/Susensio/dotfiles.yadm.git
-yadm_git_path: "{{ ansible_env.HOME }}/.local/share/yadm/repo.git"
+yadm_config_path: "{{ ansible_env.HOME }}/.config/{{ yadm_name }}"
+yadm_data_path: "{{ ansible_env.HOME }}/.local/share/{{ yadm_name }}"
+yadm_git_path: "{{ yadm_data_path }}/repo.git"
 yadm_git_worktree: "{{ ansible_env.HOME }}"
-yadm_sparse_excluded:
-  - README.md
-  - .github
+yadm_cmd: "yadm --yadm-dir {{ yadm_config_path }} --yadm-data {{ yadm_data_path }}"

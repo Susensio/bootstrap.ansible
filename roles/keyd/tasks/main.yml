@@ -1,0 +1,41 @@
+- name: keyd is downloaded
+  become: true
+  unarchive:
+    src: "https://github.com/rvaiya/keyd/archive/refs/tags/{{ keyd_version }}.tar.gz"
+    dest: "/opt"
+    remote_src: true
+    extra_opts:
+      - --strip-components=1
+      - --one-top-level=keyd
+  register: keyd_downloaded
+  tags:
+    - install
+    - keyd
+
+- name: keyd is built
+  become: true
+  shell:
+    cmd: "make && make install"
+    chdir: "/opt/keyd"
+  when: keyd_downloaded.changed
+  tags:
+    - install
+    - keyd
+
+- name: Config file is updated
+  become: true
+  copy:
+    src: default.conf
+    dest: /etc/keyd/default.conf
+  tags:
+    - install
+    - keyd
+
+- name: Service is running
+  become: true
+  service:
+    name: keyd
+    state: started
+    enabled: true
+  tags:
+    - keyd

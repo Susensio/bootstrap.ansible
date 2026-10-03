@@ -1,0 +1,20 @@
+- name: Nerd fonts directory exists
+  ansible.builtin.file:
+    path: "{{ fonts_folder }}/NerdFonts"
+    state: directory
+    mode: "0755"
+  tags:
+    - install
+    - fonts
+
+- name: "Nerd fonts are installed"
+  unarchive:
+    src: "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/{{ item }}.tar.xz"
+    dest: "{{ fonts_folder }}/NerdFonts/"
+    remote_src: yes
+    extra_opts: "--one-top-level={{ item }}"
+  loop: "{{ nerd_fonts }}"
+  notify: Rebuild font cache
+  tags:
+    - install
+    - fonts

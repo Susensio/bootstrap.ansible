@@ -1,14 +1,7 @@
 - name: Dependencies are installed
   become: true
   apt:
-    name:
-      - gcc
-      - npm
-      - curl
-      - wget
-      - unzip
-      - python3-pip
-      - python3-venv
+    name: "{{ nvim_dependencies }}"
     state: present
     update_cache: true
     cache_valid_time: "{{ 60*60*24*7 }}"
@@ -40,28 +33,13 @@
 
 - name: NVIM stable is installed
   block:
+    - name: Download release for x86_64
+      include_tasks: release.yml
+      when: ansible_architecture == "x86_64"
 
-    - name: NVIM directory exists
-      file:
-        path: /opt/nvim
-        state: directory
-
-    - name: /opt/bin directory exists
-      file:
-        path: /opt/bin
-        state: directory
-
-    - name: NVIM is downloaded
-      unarchive:
-        src: https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
-        dest: /opt/nvim
-        remote_src: yes
-        extra_opts: --strip-components=1
-
-    - name: NVIM is in PATH
-      copy:
-        src: nvim_path.sh
-        dest: /etc/profile.d/nvim_path.sh
+    - name: Build release for arm64
+      include_tasks: build.yml
+      when: ansible_architecture == "aarch64"
 
   when: nvim_release.json["tag_name"] != nvim_version.stdout
   become: true
@@ -70,24 +48,46 @@
     - update
     - nvim
 
-# - name: Needed plugins are installed
-#   command:
-#     cmd: /opt/nvim/bin/nvim --headless '+qa'
-#   register: lazy_bootstraped
-#   changed_when: lazy_bootstraped.stdout | lenght > 0
-#   tags:
-#     - install
-#     - nvim
-#     - update
-#     - config
-#
-# - name: Plugins are up to date
-#   command:
-#     cmd: /opt/nvim/bin/nvim --headless '+Lazy! sync' '+qa'
-#   register: lazy_updated
-#   changed_when: lazy_updated.stdout | lenght > 0
-#   tags:
-#     - install
-#     - nvim
-#     - update
-#     - config
+- name: Needed plugins are installed
+  command:
+    cmd: "/opt/nvim/bin/nvim --headless '+qa'"
+  register: lazy_bootstraped
+  changed_when: lazy_bootstraped.stdout | length > 0
+  tags:
+    - install
+    - nvim
+    - update
+    - config
+
+- name: Plugins are up to date
+  command:
+    cmd: "/opt/nvim/bin/nvim --headless '+Lazy! sync' '+qa'"
+  register: lazy_updated
+  changed_when: lazy_updated.stdout_lines | reject('search', 'checkout') | reject('search', 'fetch') | reject('search', 'status') | length > 0
+  tags:
+    - install
+    - nvim
+    - update
+    - config
+
+- name: Treesitter parsers are installed
+  command:
+    cmd: "/opt/nvim/bin/nvim --headless '+Lazy load nvim-treesitter' '+qa'"
+  register: lazy_bootstraped
+  changed_when: lazy_bootstraped.stdout | length > 0
+  tags:
+    - install
+    - nvim
+    - update
+    - config
+
+- name: LSPs are installed from mason (not working?)
+  command:
+    cmd: "/opt/nvim/bin/nvim --headless '+Lazy load nvim-lspconfig' '+qa'"
+  register: lazy_bootstraped
+  changed_when: lazy_bootstraped.stdout | length > 0
+  tags:
+    - install
+    - nvim
+    - update
+    - config

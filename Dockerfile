@@ -1,34 +1,33 @@
-FROM debian:testing
+FROM debian:testing as base
 
 # Avoid warnings on apt install
 ARG DEBIAN_FRONTEND=noninteractive
 ARG DEBCONF_NOWARNINGS=yes
 
 ###### USER ######
-ARG USERNAME=inside
+ARG USERNAME=test
 ARG PASSWORD=passwd
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
-# Create the user
-RUN groupadd --gid $USER_GID $USERNAME \
-    && useradd --uid $USER_UID --gid $USER_GID --create-home $USERNAME
-
+RUN adduser $USERNAME
 RUN echo "$USERNAME:$PASSWORD" | chpasswd
 
-# Update system
+RUN chsh -s /bin/bash $USERNAME
+
+###### APT CONFIGURATION ######
 RUN apt-get update && \
     apt-get -y upgrade && \
     apt-get autoremove -y && \
     apt-get autoclean -y && \
     apt-get install apt-utils -y
 
-# [Optional] Add sudo support. Omit if you don't need to install software after connecting.
+# Add sudo
 RUN apt-get install -y sudo && \
     echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME && \
     chmod 0440 /etc/sudoers.d/$USERNAME
 
-###### LOCALE ######
+# Set locale
 RUN apt-get install -y locales
 
 RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
@@ -38,6 +37,12 @@ RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
 
 ENV LANG en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
+
+# Essential packages
+RUN apt-get install -y curl git wget
+
+
+FROM base
 
 ###### PYTHON and ANSIBLE ######
 RUN sudo apt-get update && sudo apt-get install -y python3 ansible
@@ -70,11 +75,14 @@ RUN ansible localhost --inventory=localhots, --connection=local --module-name=in
 # COPY ./roles/anacron /ansible/roles/anacron
 # RUN ansible localhost --inventory=localhots, --connection=local --module-name=include_role --args name=anacron
 
-# COPY ./roles/bin /ansible/roles/bin
-# RUN ansible localhost --inventory=localhots, --connection=local --module-name=include_role --args name=bin
+COPY ./roles/eget /ansible/roles/eget
+RUN ansible localhost --inventory=localhots, --connection=local --module-name=include_role --args name=eget
 
 COPY ./roles/gh /ansible/roles/gh
 RUN ansible localhost --inventory=localhots, --connection=local --module-name=include_role --args name=gh
+
+# COPY ./roles/docker /ansible/roles/docker
+# RUN ansible localhost --inventory=localhots, --connection=local --module-name=include_role --args name=docker
 
 COPY ./roles/fish /ansible/roles/fish
 RUN ansible localhost --inventory=localhots, --connection=local --module-name=include_role --args name=fish

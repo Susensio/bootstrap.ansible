@@ -6,12 +6,6 @@
   tags:
     - lightdm
 
-- name: Debug default display manager
-  debug:
-    var: "{{ default_display_manager['content'] | b64decode }}"
-  tags:
-    - lightdm
-
 - name: Only if lighdm is used
   become: true
   block:
@@ -25,6 +19,6 @@
         src: xauthority_xdg.conf
         dest: /etc/lightdm/lightdm.conf.d/xauthority_xdg.conf
   when:
-    - '{{ "lightdm" in default_display_manager.content | b64decode }}'
+    - '"lightdm" in default_display_manager.content | b64decode'
   tags:
     - lightdm

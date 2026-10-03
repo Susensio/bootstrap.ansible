@@ -15,29 +15,43 @@
   environment:
     GIT_TERMINAL_PROMPT: 0
   shell:
-    cmd: "yadm clone {{ dotfiles_repo }} --no-bootstrap && yadm checkout {{ ansible_env.HOME }}"
+    cmd: "{{ yadm_cmd }} clone {{ yadm_dotfiles_repo }} --no-bootstrap && {{ yadm_cmd }} checkout -f"
     creates: "{{ yadm_git_path }}"
   tags:
     - install
     - yadm
 
-- name: Git include is configured
-  vars:
-    yadm_git_path: "{{ ansible_env.HOME }}/.local/share/yadm/repo.git"
-  environment:
-    GIT_TERMINAL_PROMPT: 0
+- name: Pull is done throught HTTPS
+  community.general.git_config:
+    repo: "{{ yadm_git_path }}"
+    name: remote.origin.url
+    value: "{{ yadm_dotfiles_repo | regex_replace('git@github.com:', '^https://github.com/') }}"
+    scope: local
+  tags:
+    - install
+    - yadm
+
+- name: Push is done throught SSH
+  community.general.git_config:
+    repo: "{{ yadm_git_path }}"
+    name: remote.origin.pushurl
+    value: "{{ yadm_dotfiles_repo | regex_replace('^https://github.com/', 'git@github.com:') }}"
+    scope: local
+  tags:
+    - install
+    - yadm
+
+- name: Gitconfig include is linked
   git_config:
     repo: "{{ yadm_git_path }}"
     name: include.path
-    value: "{{ ansible_env.HOME }}/.config/yadm/gitconfig"
+    value: "{{ yadm_config_path }}/gitconfig"
     scope: local
   tags:
     - yadm
     - config
 
 - name: Sparse checkout is enabled
-  environment:
-    GIT_TERMINAL_PROMPT: 0
   git_config:
     repo: "{{ yadm_git_path }}"
     name: core.sparseCheckout
@@ -56,9 +70,11 @@
     - config
 
 - name: Sparse checkout is applied
+  environment:
+    GIT_TERMINAL_PROMPT: 0
   command:
     chdir: "{{ yadm_git_worktree }}"
-    cmd: yadm sparse-checkout reapply
+    cmd: "{{ yadm_cmd }} sparse-checkout reapply"
     removes: ".github/"
   tags:
     - yadm
@@ -68,7 +84,7 @@
   environment:
     GIT_TERMINAL_PROMPT: 0
   command:
-    cmd: "yadm pull"
+    cmd: "{{ yadm_cmd }} pull"
   register: yadm_pulled
   changed_when: not yadm_pulled.stdout is search("Already up to date")
   tags:

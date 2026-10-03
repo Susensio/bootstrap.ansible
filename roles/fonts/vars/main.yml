@@ -1,0 +1,11 @@
+fonts_folder: "{{ ansible_env.HOME }}/.local/share/fonts"
+
+nerd_fonts:
+  - DejaVuSansMono
+  - Ubuntu
+  - UbuntuMono
+  - VictorMono
+  - Recursive
+  - Iosevka
+  - CascadiaMono
+  - CommitMono

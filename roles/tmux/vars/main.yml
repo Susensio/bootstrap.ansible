@@ -1,2 +1,11 @@
-tpm_path: "{{ ansible_env.HOME }}/.local/share/tmux/plugins/tpm"
+tmux_repo: "https://github.com/tmux/tmux.git"
+tmux_path: "{{ ansible_env.HOME }}/.local/lib/tmux/"
 tpm_repo: "https://github.com/tmux-plugins/tpm.git"
+tpm_path: "{{ ansible_env.HOME }}/.local/share/tmux/plugins/tpm"
+tmux_dependencies:
+  - autoconf
+  - automake
+  - pkg-config
+  - libevent-dev
+  - ncurses-dev
+  - bison

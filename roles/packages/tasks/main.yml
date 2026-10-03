@@ -12,11 +12,21 @@
     - install
     - packages
 
-- name: Bat symlink exists
+- name: bat symlink exists
   become: true
   file:
     src: /usr/bin/batcat
     dest: /usr/bin/bat
+    state: link
+  tags:
+    - install
+    - packages
+
+- name: fd symlink exists
+  become: true
+  file:
+    src: /usr/bin/fdfind
+    dest: /usr/bin/fd
     state: link
   tags:
     - install

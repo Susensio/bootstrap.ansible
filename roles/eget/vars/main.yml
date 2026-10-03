@@ -1,0 +1,10 @@
+eget_repo: "zyedidia/eget"
+bin_path: "$HOME/.local/bin"
+eget_path: "{{ bin_path }}/eget"
+
+eget_repos:
+- jesseduffield/lazygit
+- jesseduffield/lazydocker
+
+raw_scripts:
+- ianthehenry/sd/master/sd

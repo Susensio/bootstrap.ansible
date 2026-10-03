@@ -1,0 +1,23 @@
+- name: Dependencies are installed
+  become: true
+  apt:
+    name: "{{ cidm_dependencies }}"
+    state: present
+    update_cache: true
+    cache_valid_time: "{{ 60*60*24*7 }}"
+  tags:
+    - install
+    - dependencies
+    - cidm
+
+- name: Cinnamon dotfiles are present
+  include_role:
+    role: yadm
+    apply:
+      tags: cidm
+  vars:
+    - yadm_name: "cidm"
+    - yadm_dotfiles_repo: "{{ cidm_dotfiles_repo }}"
+    - yadm_show_untracked: true
+  tags: cidm
+  when: ansible_distribution == "Linux Mint"

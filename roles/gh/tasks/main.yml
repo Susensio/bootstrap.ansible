@@ -1,6 +1,5 @@
 - name: Dependency is installed
   become: true
-  delegate_to: localhost
   apt:
     name: python3-debian
     state: present

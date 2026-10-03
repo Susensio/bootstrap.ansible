@@ -1,0 +1,41 @@
+#
+# - name: APT Repository is present
+#   become: true
+#   deb822_repository:
+#     name: docker
+#     types: deb
+#     uris: "https://download.docker.com/linux/{{ ansible_distribution | lower | replace('linux mint', 'ubuntu') }}"
+#     suites: "{{ ansible_distribution_release }}"
+#     components: stable
+#     # architectures: arm64
+#     signed_by: https://download.docker.com/linux/raspbian/gpg
+#   tags:
+#     - install
+#     - docker
+
+- name: Packages are installed
+  become: true
+  apt:
+    name:
+      - docker.io
+      - docker-buildx
+      - docker-compose-v2
+    state: present
+    update_cache: true
+    cache_valid_time: "{{ 60*60*24*7 }}"  # 1 week
+    autoclean: true
+    autoremove: true
+    purge: true
+  tags:
+    - install
+    - docker
+
+- name: "{{ user }} is in docker group"
+  become: true
+  user:
+    name: '{{ user }}'
+    groups: docker
+    append: yes
+  tags:
+    - install
+    - docker

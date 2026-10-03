@@ -1,0 +1,63 @@
+- name:  directory exists
+  file:
+    path: "{{ bin_path }}"
+    state: directory
+  tags:
+    - install
+    - eget
+
+- name: Check if already installed
+  stat:
+    path: "{{ eget_path }}"
+  register: eget_file
+  tags:
+    - install
+    - eget
+
+- name: Download eget
+  shell:
+    cmd: curl https://zyedidia.github.io/eget.sh | sh
+    chdir: /tmp
+    creates: /tmp/eget
+  when: not eget_file.stat.exists
+  tags:
+    - install
+    - eget
+
+- name: eget is managed by itself
+  command:
+    cmd: "/tmp/eget {{ eget_repo }} --to={{ bin_path }} --upgrade-only"
+    creates: "{{ eget_path }}"
+  tags:
+    - install
+    - eget
+
+- name: Managed binaries are installed
+  command:
+    cmd: "{{ eget_path }} {{ item }} --to={{ bin_path }}"
+    creates: "{{ bin_path }}/{{ item.split('/')[1] }}"
+  loop: "{{ eget_repos }}"
+  tags:
+    - install
+    - eget
+
+- name: Managed binaries are up to date
+  command:
+    cmd: "{{ eget_path }} {{ item }} --to={{ bin_path }} --upgrade-only"
+  loop: "{{ eget_repos }}"
+  register: eget_binaries
+  changed_when: not eget_binaries.stderr is search("requested release is not more recent than current version")
+  tags:
+    - update
+    - eget
+
+- name: Raw scripts are installed
+  get_url:
+    url: "https://raw.githubusercontent.com/{{ item }}"
+    dest: "{{ ansible_env.HOME }}/.local/bin"
+    mode: a+x
+  loop: "{{ raw_scripts }}"
+  tags:
+    - install
+    - update
+    - eget
